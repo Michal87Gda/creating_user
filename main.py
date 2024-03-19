@@ -147,7 +147,6 @@ def get_all_posts():
 @app.route("/post/<int:post_id>")
 def show_post(post_id):
     requested_post = db.get_or_404(BlogPost, post_id)
-    author = db.get_or_404(User, )
     return render_template("post.html", post=requested_post, logged_in=current_user.is_authenticated)
 
 
