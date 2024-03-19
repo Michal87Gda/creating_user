@@ -12,7 +12,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 # Import your forms from the forms.py
 from forms import CreatePostForm, RegisterForm, LoginForm
 
-
 '''
 Make sure the required packages are installed: 
 Open the Terminal in PyCharm (bottom left). 
@@ -31,18 +30,30 @@ app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
 ckeditor = CKEditor(app)
 Bootstrap5(app)
 
+
 # TODO: Configure Flask-Login
+def admin_only(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if current_user != 1:
+            return abort(403)
+        return f(*args, **kwargs)
+
+    return decorated_function
 
 
 # CREATE DATABASE
 class Base(DeclarativeBase):
     pass
+
+
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///posts.db'
 db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -66,8 +77,8 @@ class BlogPost(db.Model):
 class User(UserMixin, db.Model):
     __tablename__ = "user"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String(100), unique=True)
-    email: Mapped[str] = mapped_column(String(100))
+    name: Mapped[str] = mapped_column(String(100))
+    email: Mapped[str] = mapped_column(String(100), unique=True)
     password: Mapped[str] = mapped_column(String(100))
 
 
@@ -83,15 +94,15 @@ def register():
         email = form.email.data
         result = db.session.execute(db.select(User).where(User.email == email))
         user = result.scalar()
-        if user :
+        if user:
             flash("This email is already registered. Log in")
             return redirect(url_for("login"))
         else:
             password_hashed = generate_password_hash(form.password.data, method='pbkdf2:sha256', salt_length=8)
             new_user = User(
-                name = form.name.data,
-                email = form.email.data,
-                password = password_hashed
+                name=form.name.data,
+                email=form.email.data,
+                password=password_hashed
             )
             db.session.add(new_user)
             db.session.commit()
@@ -103,13 +114,13 @@ def register():
 # TODO: Retrieve a user from the database based on their email. 
 @app.route('/login', methods=["POST", "GET"])
 def login():
-    form=LoginForm()
+    form = LoginForm()
     if form.validate_on_submit():
-        email=form.email.data
-        password=form.password.data
+        email = form.email.data
+        password = form.password.data
         result = db.session.execute(db.select(User).where(User.email == email))
         user = result.scalar()
-        if not user :
+        if not user:
             flash("This emial is not registered. Register first")
             return redirect(url_for("login"))
         elif check_password_hash(user.password, password):
@@ -140,6 +151,7 @@ def show_post(post_id):
 
 # TODO: Use a decorator so only an admin user can create a new post
 @app.route("/new-post", methods=["GET", "POST"])
+@admin_only
 def add_new_post():
     form = CreatePostForm()
     if form.validate_on_submit():
@@ -159,6 +171,7 @@ def add_new_post():
 
 # TODO: Use a decorator so only an admin user can edit a post
 @app.route("/edit-post/<int:post_id>", methods=["GET", "POST"])
+@admin_only
 def edit_post(post_id):
     post = db.get_or_404(BlogPost, post_id)
     edit_form = CreatePostForm(
@@ -181,6 +194,7 @@ def edit_post(post_id):
 
 # TODO: Use a decorator so only an admin user can delete a post
 @app.route("/delete/<int:post_id>")
+@admin_only
 def delete_post(post_id):
     post_to_delete = db.get_or_404(BlogPost, post_id)
     db.session.delete(post_to_delete)
