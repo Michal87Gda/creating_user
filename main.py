@@ -10,7 +10,9 @@ from sqlalchemy import Integer, String, Text, ForeignKey
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 # Import your forms from the forms.py
-from forms import CreatePostForm, RegisterForm, LoginForm
+from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm
+from flask_ckeditor import CKEditor, CKEditorField
+
 
 '''
 Make sure the required packages are installed: 
@@ -70,7 +72,7 @@ class BlogPost(db.Model):
     author = relationship("User", back_populates="posts")
     img_url: Mapped[str] = mapped_column(String(250), nullable=False)
     author_id: Mapped[int] = mapped_column(Integer, db.ForeignKey("user.id"))
-
+    comments = relationship("Comment", back_populates="parrent_post")
 
 # TODO: Create a User table for all your registered users.
 
@@ -81,6 +83,16 @@ class User(UserMixin, db.Model):
     email: Mapped[str] = mapped_column(String(100), unique=True)
     password: Mapped[str] = mapped_column(String(100))
     posts = relationship("BlogPost", back_populates="author")
+    comments = relationship("Comment", back_populates="comment_author")
+
+class Comment(db.Model):
+    __tablename__ = "comments"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    author_id: Mapped[int] = mapped_column(Integer, db.ForeignKey("user.id"))
+    comment_author = relationship("User", back_populates="comments")
+    parrent_post = relationship("BlogPost", back_populates="comments")
+    post_id: Mapped[int] = mapped_column(Integer, db.ForeignKey("blog_post.id"))
 
 
 with app.app_context():
@@ -146,8 +158,9 @@ def get_all_posts():
 # TODO: Allow logged-in users to comment on posts
 @app.route("/post/<int:post_id>")
 def show_post(post_id):
+    form = CommentForm()
     requested_post = db.get_or_404(BlogPost, post_id)
-    return render_template("post.html", post=requested_post, logged_in=current_user.is_authenticated)
+    return render_template("post.html", post=requested_post, logged_in=current_user.is_authenticated, form=form)
 
 
 # TODO: Use a decorator so only an admin user can create a new post
