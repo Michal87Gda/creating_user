@@ -1,5 +1,7 @@
 from datetime import date
-from flask import Flask, abort, render_template, redirect, url_for, flash
+
+import requests
+from flask import Flask, abort, render_template, redirect, url_for, flash, request
 from flask_bootstrap import Bootstrap5
 from flask_gravatar import Gravatar
 from flask_login import UserMixin, login_user, LoginManager, current_user, logout_user, login_required
@@ -9,7 +11,7 @@ from sqlalchemy import Integer, String, Text, ForeignKey
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 # Import your forms from the forms.py
-from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm
+from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm, CommentOfComment, ButtonReply
 from flask_ckeditor import CKEditor, CKEditorField
 
 
@@ -92,6 +94,8 @@ class User(UserMixin, db.Model):
     password: Mapped[str] = mapped_column(String(100))
     posts = relationship("BlogPost", back_populates="author")
     comments = relationship("Comment", back_populates="comment_author")
+    comments2 = relationship("Comment2", back_populates="comment2_author")
+
 
 class Comment(db.Model):
     __tablename__ = "comments"
@@ -101,7 +105,16 @@ class Comment(db.Model):
     comment_author = relationship("User", back_populates="comments")
     parrent_post = relationship("BlogPost", back_populates="comments")
     post_id: Mapped[int] = mapped_column(Integer, db.ForeignKey("blog_posts.id"))
+    child_comment = relationship("Comment2", back_populates="parrent_comment")
 
+class Comment2(db.Model):
+    __tablename__ ="comments2"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    text: Mapped[str] = mapped_column(String(100))
+    author_id: Mapped[int] = mapped_column(Integer, db.ForeignKey("user.id"))
+    comment2_author = relationship("User", back_populates="comments2")
+    parrent_comment_id: Mapped[int] = mapped_column(Integer, db.ForeignKey("comments.id"))
+    parrent_comment = relationship("Comment", back_populates="child_comment")
 
 with app.app_context():
     db.create_all()
@@ -168,8 +181,11 @@ def get_all_posts():
 @app.route("/post/<int:post_id>", methods=["POST", "GET"])
 def show_post(post_id):
     requested_post = db.get_or_404(BlogPost, post_id)
+    # requested_comment = requests.get.arg()
     form = CommentForm()
+    comment_form = CommentOfComment()
     if form.validate_on_submit():
+        print(type(requested_post))
         if current_user.is_authenticated:
             new_comment = Comment(
                 text=form.body.data,
@@ -182,7 +198,28 @@ def show_post(post_id):
         else:
             flash("If You want to comment log in first")
             return redirect(url_for("login"))
-    return render_template("post.html", post=requested_post, logged_in=current_user.is_authenticated, form=form)
+    return render_template("post.html", post=requested_post, logged_in=current_user.is_authenticated, comment_form=comment_form, form=form)
+
+@app.route("/comment", methods=["POST", "GET"])
+def make_comment():
+    comment_id = request.args.get('comment_id')
+    requested_comment = db.get_or_404(Comment, comment_id)
+    post_id = request.args.get('comment_id')
+    requested_post = db.get_or_404(BlogPost, post_id)
+    if request.method == 'POST':
+        if current_user.is_authenticated:
+            new_comment = Comment2(
+                comment2_author=current_user,
+                parrent_comment=requested_comment,
+                text=request.form['comment2']
+            )
+            db.session.add(new_comment)
+            db.session.commit()
+            return redirect(url_for("show_post", post_id=requested_post.id))
+        else:
+            flash("If You want to comment log in first")
+            return redirect(url_for("login"))
+
 
 
 # TODO: Use a decorator so only an admin user can create a new post

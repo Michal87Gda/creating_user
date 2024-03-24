@@ -39,20 +39,49 @@
                 <!-- Comments Area -->
                 <!-- TODO: Add a CKEditor for commenting below -->
                 {{ ckeditor.load() }}
-                    {{ ckeditor.config(name='body') }}
-                    {{ render_form(form, novalidate=True, button_map={"submit": "primary"}) }}
+                {{ ckeditor.config(name='body') }}
+                {{ render_form(form, novalidate=True, button_map={"submit": "primary"}) }}
                 <div class="comment">
 
                     <!-- TODO: Show all the comments on a post -->
-                    <ul class="commentList">
+                    <ul>
                         {% for comment in post.comments %}
-                        <li>
+                        <li class="liClass">
                             <div class="commenterImage">
                                 <img src="{{ comment.comment_author.email | gravatar }}"/>
                             </div>
                             <div class="commentText">
                                 <p>{{ comment.text|safe }}</p>
-                                <span class="date sub-text">{{ comment.comment_author.name }}</span>
+                                <span class="date sub-text"><strong>{{ comment.comment_author.name }}</strong> </span>
+                                <div>
+                                    <!--comment of comment line-->
+                                    <ul>
+                                        {% for comment2 in comment.child_comment %}
+                                        <li class="liClass">
+                                            <div class="commenterImage">
+                                                <img src="{{ comment2.comment2_author.email | gravatar }}"/>
+                                            </div>
+                                            <div class="commentText">
+                                                <p>{{ comment2.text|safe }}</p>
+                                                <span class="date sub-text"><strong>{{ comment2.comment2_author.name }}</strong> </span>
+                                            </div>
+                                        {% endfor %}
+                                    </ul>
+                                    <div>
+                                        <!--end of comment of comment line -->
+                                        <form action="{{ url_for('make_comment', post_id=post.id, comment_id=comment.id) }}"
+                                              method="post" role="form">
+                                            <div class="form-group">
+                                                <label>Comment:</label>
+                                                <input class="form-control" name="comment2">
+                                                <div class="d-flex justify-content-end mt-4">
+                                                    <input type="submit" class="btn btn-primary float-right"
+                                                           value="Reply"/>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
                             </div>
                         </li>
                         {% endfor %}

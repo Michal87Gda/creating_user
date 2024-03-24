@@ -10814,6 +10814,7 @@ header.masthead .post-heading .meta a {
 
 .comment {
   padding-top: 20px;
+  padding-bottom: 20px;
 }
 .commentList {
   padding:0;
@@ -10827,6 +10828,9 @@ header.masthead .post-heading .meta a {
 }
 .commentList li > div {
   display:table-cell;
+}
+.liClass{
+padding-top: 80px;
 }
 .commenterImage {
   width:30px;

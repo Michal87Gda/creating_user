@@ -35,3 +35,10 @@ class LoginForm(FlaskForm):
 class CommentForm(FlaskForm):
     body = CKEditorField('Comment')
     button = SubmitField('Submit Comment')
+
+class CommentOfComment(FlaskForm):
+    body = StringField('Comment')
+    button = SubmitField('Reply')
+
+class ButtonReply(FlaskForm):
+    button = SubmitField('Reply')
