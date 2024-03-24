@@ -204,7 +204,8 @@ def show_post(post_id):
 def make_comment():
     comment_id = request.args.get('comment_id')
     requested_comment = db.get_or_404(Comment, comment_id)
-    post_id = request.args.get('comment_id')
+    print("udało się ")
+    post_id = request.args.get('post_id')
     requested_post = db.get_or_404(BlogPost, post_id)
     if request.method == 'POST':
         if current_user.is_authenticated:
